@@ -125,6 +125,7 @@ let Mpd = {
 function Scene(exponent, spread){
     _.assign(this, {
         camera: null,
+        light: null,
         scene: null,
         renderer: null,
         mesh: null,
@@ -139,15 +140,21 @@ function Scene(exponent, spread){
 }
 
 Scene.prototype.init = function init(){
-    let self = this;
+    let self = this,
+        width = window.innerWidth,
+        height = window.innerHeight;
 
     self.scene = new THREE.Scene();
 
-    self.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
+    self.camera = new THREE.PerspectiveCamera(50, width / height, 1, 10000);
     self.scene.add(self.camera);
 
+    self.light = new THREE.PointLight(0xffffff, 1, 10000);
+    self.light.position.set(1000, 1000, 1000);
+    self.scene.add(self.light);
+
     self.renderer = new THREE.WebGLRenderer();
-    self.renderer.setSize(window.innerWidth, window.innerHeight);
+    self.renderer.setSize(width, height);
 
     self.controls = new OrbitControls(self.camera);
 
@@ -189,6 +196,8 @@ Scene.prototype.hmToGeometry = function hmToGeometry(hm, scale) {
         ));
     });
 
+    geometry.computeFaceNormals();
+
     return geometry
 };
 
@@ -202,39 +211,32 @@ Scene.prototype.createTerrain = function createTerrain() {
         landMaterial,
         waterMaterial,
         land,
-        landEdges,
         water;
 
     // Set up material
-    landMaterial = new THREE.MeshBasicMaterial({color: 0x993311});
-    waterMaterial = new THREE.MeshBasicMaterial({color: 0x224488, opacity: 0.8, transparent: true});
+    landMaterial = new THREE.MeshLambertMaterial({color: 0x993311});
+    waterMaterial = new THREE.MeshLambertMaterial({color: 0x224488, opacity: 0.8, transparent: true});
 
     land = new THREE.Mesh(landGeometry, landMaterial);
     land.rotation.x -= Math.PI / 2;
     land.position.x -= radius;
     land.position.z += radius;
 
-    // Highlight edges
-    landEdges = new THREE.EdgesHelper(land);
-    landEdges.material.linewidth = 2;
-    landEdges.material.color = new THREE.Color(0.9, 0.3, 0.3);
-
+    waterGeometry.computeFaceNormals();
     water = new THREE.Mesh(waterGeometry, waterMaterial);
     water.rotation.x -= Math.PI / 2;
 
-    // Reposition the camera
+    // Reposition camera
     self.camera.position.set(radius, radius, radius);
     self.camera.lookAt(new THREE.Vector3(0, 0, 0));
 
     // Add it
     self.scene.add(land);
-    self.scene.add(landEdges);
     self.scene.add(water);
 
     // save it for the render loop
     self.land = land;
-
-
+    self.water = water;
 }
 
 Scene.prototype.animate = function animate() {
