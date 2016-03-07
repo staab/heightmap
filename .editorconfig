@@ -1,0 +1,15 @@
+# EditorConfig file for the bazaar repository
+# See http://EditorConfig.org for additional information, including syntax
+
+# This is the top-most EditorConfig file (subdirectories may define their own
+# .editorconfig file)
+root = true
+
+# Tab indentation. No size is specified, meaning you can set your IDE to your
+# preferred spacing style (1-space tabs, 8-space tabs, we don't care).
+indent_style = space
+indent_size = 2
+
+# Trim all whitespaces from end of lines...
+[*]
+trim_trailing_whitespace = true
