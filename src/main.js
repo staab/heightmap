@@ -3,69 +3,12 @@
 import * as _ from 'lodash';
 import * as THREE from 'three';
 import * as _OrbitControls from 'three-orbit-controls';
+
+import {Util} from './util.js';
+import {Hm} from './heightmap.js';
 import {Perlin, Mpd} from './noise.js';
 
 let OrbitControls = _OrbitControls.default(THREE);
-
-let Util = {
-    withinOpen: (low, v, high) => low <= v && v <= high,
-    withinClosed: (low, v, high) => low < v && v < high,
-    randAroundZero: (spread) => (spread * 2 * Math.random()) - spread,
-    jitter: (value, spread) => value + Util.randAroundZero(spread),
-    average: (...items) => _.sum(items) / items.length,
-    doNested(width, fn){
-        for(let x = 0; x < width; x++) {
-            for(let y = 0; y < width; y++) {
-                fn(x, y);
-            }
-        }
-    }
-};
-
-let Hm = {
-    create(exponent) {
-        let resolution = 1 + Math.pow(2, exponent),
-            hm;
-
-        hm = _.map(new Array(Math.pow(resolution, 2)), function(){
-            return 0.0;
-        });
-
-        return _.assign(hm, {
-            resolution: resolution,
-            exponent: exponent,
-            last: resolution - 1
-        });
-    },
-    getIndex(hm, x, y) {
-        return x + (y * hm.resolution);
-    },
-    get(hm, x, y) {
-        return hm[Hm.getIndex(hm, x, y)];
-    },
-    getSafe(hm, x, y) {
-        return Util.withinOpen(0, x, hm.last) && Util.withinOpen(0, y, hm.last)
-            ? Hm.get(hm, x, y) : null;
-    },
-    set(hm, x, y, v) {
-        hm[Hm.getIndex(hm, x, y)] = v;
-
-        return hm;
-    },
-    normalize(hm) {
-        let min = _.min(hm),
-            span = _.max(hm) - min;
-
-        return hm.map(function(v){
-            return (v - min) / span;
-        });
-    },
-    noise(hm) {
-        return hm.map(Math.random);
-    }
-};
-
-
 
 function Scene(exponent, spread){
     let self = this,
@@ -105,9 +48,6 @@ function Scene(exponent, spread){
     // Animate
     self.createTerrain();
     self.animate();
-}
-
-Scene.prototype.init = function init(){
 }
 
 Scene.prototype.hmToGeometry = function hmToGeometry(hm, scale) {
@@ -206,11 +146,5 @@ Scene.prototype.render = function render() {
     this.renderer.render(this.scene, this.camera);
 
 }
-
-window.THREE = THREE;
-window.Util = Util;
-window.Hm = Hm;
-window.Mpd = Mpd;
-window.Scene = Scene;
 
 window.s = new Scene(6, 10);

@@ -2,6 +2,9 @@
 
 import * as _ from 'lodash';
 
+import {Util} from './util.js';
+import {Hm} from './heightmap.js';
+
 let Perlin = {
     fade (t) {
         return t * t * t * (t * (t * 6 - 15) + 10)
