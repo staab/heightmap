@@ -3,12 +3,13 @@
 import * as _ from 'lodash';
 import * as THREE from 'three';
 import * as _OrbitControls from 'three-orbit-controls';
+import {Perlin, Mpd} from './noise.js';
 
 let OrbitControls = _OrbitControls.default(THREE);
 
 let Util = {
     withinOpen: (low, v, high) => low <= v && v <= high,
-    withinclosed: (low, v, high) => low < v && v < high,
+    withinClosed: (low, v, high) => low < v && v < high,
     randAroundZero: (spread) => (spread * 2 * Math.random()) - spread,
     jitter: (value, spread) => value + Util.randAroundZero(spread),
     average: (...items) => _.sum(items) / items.length,
@@ -64,101 +65,49 @@ let Hm = {
     }
 };
 
-let Mpd = {
-    initCorners(hm) {
-        hm = Hm.set(hm, 0, 0, Math.random());
-        hm = Hm.set(hm, 0, hm.last, Math.random());
-        hm = Hm.set(hm, hm.last, 0, Math.random());
-        hm = Hm.set(hm, hm.last, hm.last, Math.random());
 
-        return hm;
-    },
-    displace(hm, lx, rx, by, ty, spread) {
-        let cx = Util.average(lx, rx),
-            cy = Util.average(by, ty),
-            // Positions
-            bottomLeft = Hm.get(hm, lx, by),
-            bottomRight = Hm.get(hm, rx, by),
-            topLeft = Hm.get(hm, lx, ty),
-            topRight = Hm.get(hm, rx, ty),
-            // Midpoints of sides
-            top = Util.average(topLeft, topRight),
-            left = Util.average(bottomLeft, topLeft),
-            bottom = Util.average(bottomLeft, bottomRight),
-            right = Util.average(bottomRight, topRight),
-            center = Util.average(top, left, bottom, right);
-
-        hm = Hm.set(hm, cx, by, Util.jitter(bottom, spread));
-        hm = Hm.set(hm, cx, ty, Util.jitter(top, spread));
-        hm = Hm.set(hm, lx, cy, Util.jitter(left, spread));
-        hm = Hm.set(hm, rx, cy, Util.jitter(right, spread));
-        hm = Hm.set(hm, cx, cy, Util.jitter(center, spread));
-
-        return hm;
-    },
-    displacement(hm, spread) {
-        var iter = 0;
-
-        hm = Mpd.initCorners(hm);
-
-        while(iter < hm.exponent){
-            let chunks = Math.pow(2, iter),
-                chunkWidth = (hm.resolution - 1) / chunks;
-
-            Util.doNested(chunks, function(xChunk, yChunk){
-                let leftX = chunkWidth * xChunk,
-                    rightX = leftX + chunkWidth,
-                    bottomY = chunkWidth * yChunk,
-                    topY = bottomY + chunkWidth;
-
-                hm = Mpd.displace(hm, leftX, rightX, bottomY, topY, spread);
-            });
-
-            iter += 1;
-            spread *= 1 / iter;
-        }
-
-        return hm;
-    }
-};
 
 function Scene(exponent, spread){
-    _.assign(this, {
-        camera: null,
-        light: null,
-        scene: null,
-        renderer: null,
-        mesh: null,
-        controls: null,
-        exponent: exponent,
-        spread: spread,
-    });
-
-    this.init();
-    this.createTerrain();
-    this.animate();
-}
-
-Scene.prototype.init = function init(){
     let self = this,
         width = window.innerWidth,
         height = window.innerHeight;
 
-    self.scene = new THREE.Scene();
+    _.assign(self, {
+        scene: new THREE.Scene(),
+        camera: new THREE.PerspectiveCamera(50, width / height, 1, 10000),
+        ambientLight: new THREE.AmbientLight(0x402020),
+        pointLight1: new THREE.PointLight(0xccccff, 1, 100000),
+        pointLight2: new THREE.PointLight(0xccccff, 1, 100000),
+        renderer: new THREE.WebGLRenderer(),
+        exponent: exponent,
+        spread: spread,
+    });
 
-    self.camera = new THREE.PerspectiveCamera(50, width / height, 1, 10000);
-    self.scene.add(self.camera);
+    // Set point light position
+    self.pointLight1.position.set(300, 300, 1000);
+    self.pointLight2.position.set(-300, -300, 1000);
 
-    self.light = new THREE.PointLight(0xffffff, 1, 10000);
-    self.light.position.set(1000, 1000, 1000);
-    self.scene.add(self.light);
-
-    self.renderer = new THREE.WebGLRenderer();
+    // Renderer
     self.renderer.setSize(width, height);
 
-    self.controls = new OrbitControls(self.camera);
+    // Add stuff to the scene
+    self.scene.add(self.camera);
+    self.scene.add(self.ambientLight);
+    self.scene.add(self.pointLight1);
+    self.scene.add(self.pointLight2);
 
+    // Add it to the body
     document.body.appendChild(self.renderer.domElement);
+
+    // Add some controls
+    new OrbitControls(self.camera),
+
+    // Animate
+    self.createTerrain();
+    self.animate();
+}
+
+Scene.prototype.init = function init(){
 }
 
 Scene.prototype.hmToGeometry = function hmToGeometry(hm, scale) {
@@ -207,7 +156,7 @@ Scene.prototype.createTerrain = function createTerrain() {
         hm = Mpd.displacement(Hm.create(self.exponent), self.spread),
         radius = (hm.resolution / 2) * scale,
         landGeometry = self.hmToGeometry(hm, scale),
-        waterGeometry = new THREE.PlaneGeometry(radius * 2, radius * 2),
+        waterGeometry = new THREE.PlaneGeometry(radius * 2, radius * 2, hm.resolution, hm.resolution),
         landMaterial,
         waterMaterial,
         land,
@@ -215,7 +164,7 @@ Scene.prototype.createTerrain = function createTerrain() {
 
     // Set up material
     landMaterial = new THREE.MeshLambertMaterial({color: 0x993311});
-    waterMaterial = new THREE.MeshLambertMaterial({color: 0x224488, opacity: 0.8, transparent: true});
+    waterMaterial = new THREE.MeshLambertMaterial({color: 0x2288aa, opacity: 0.8, transparent: true});
 
     land = new THREE.Mesh(landGeometry, landMaterial);
     land.rotation.x -= Math.PI / 2;
@@ -240,7 +189,16 @@ Scene.prototype.createTerrain = function createTerrain() {
 }
 
 Scene.prototype.animate = function animate() {
+    var self = this;
+
     requestAnimationFrame(this.animate.bind(this));
+
+    // Jitter
+    self.water.geometry.vertices.map(function(vertex) {
+        vertex.setZ(Util.jitter(vertex.z, 1));
+    });
+    self.water.geometry.verticesNeedUpdate = true;
+
     this.render();
 }
 
