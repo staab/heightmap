@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 
+// http://catlikecoding.com/unity/tutorials/cube-sphere/
 function createCubeSphere(segments, radius){
     let geometry = new THREE.BoxGeometry(1, 1, 1, segments, segments, segments);
 
