@@ -10,15 +10,38 @@ window.world = new World(100);
 
 // Land
 (function(){
-    let geometry = Geometry.createCubeSphere(10, 5);
+    let segments = 10;
+    let geometry = Geometry.createCubeSphere(segments, 5);
+    let scaleDampening = 10 / segments;
 
-    let h = 1;
+    function getNoise(x, y, z, scale, dampening){
+        // Make the terrain more or less extreme depending on point density
+        dampening *= scaleDampening;
+
+        // Get some noise
+        let mod = ((Math.random() + 0.5) * scale) / scaleDampening,
+            noise = Perlin.noise(x * mod, y * mod, z * mod),
+            normDelta = 1 - dampening / 2;
+
+        // Dampen it a bit
+        noise *= dampening;
+
+        // Normalize to be on either side of 1
+        noise = normDelta + noise;
+
+        return noise;
+    }
+
     geometry.vertices.map(function(v){
-        h = Math.min(1.1, Math.max(0.9, h + (Math.random() - 0.5) / 15));
+        let noise = (
+            getNoise(v.x, v.y, v.z, 0.1, 0.1) +
+            getNoise(v.y, v.z, v.x, 0.2, 0.5) +
+            getNoise(v.z, v.x, v.y, 0.3, 1)
+        ) / 3;
 
-        v.setX(v.x * h);
-        v.setY(v.y * h);
-        v.setZ(v.z * h);
+        v.setX(v.x * noise);
+        v.setY(v.y * noise);
+        v.setZ(v.z * noise);
     });
 
     let material = new THREE.MeshLambertMaterial({color: 0xaa5555});

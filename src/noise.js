@@ -46,7 +46,7 @@ let Perlin = {
                 61, 156, 180
            ];
 
-        _.range(0, 255).foreach(function(i){
+        _.range(0, 255).forEach(function(i){
             p[256+i] = p[i] = permutation[i];
 
         });
@@ -62,9 +62,9 @@ let Perlin = {
             z -= Math.floor(z);
 
         // compute fade curves for each of x,y,z.
-        var u = fade(x),
-            v = fade(y),
-            w = fade(z);
+        var u = Perlin.fade(x),
+            v = Perlin.fade(y),
+            w = Perlin.fade(z);
 
         // hash coordinates of the 8 cube corners
         var A = p[X] + Y,
@@ -75,18 +75,18 @@ let Perlin = {
             BB = p[B + 1] + Z;
 
         // add blended results from 8 corners of cube
-        return scale(
-            lerp(
+        return Perlin.scale(
+            Perlin.lerp(
                 w,
-                lerp(
+                Perlin.lerp(
                     v,
-                    lerp(u, grad(p[AA], x, y, z), grad(p[BA], x - 1, y, z)),
-                    lerp(u, grad(p[AB], x, y - 1, z), grad(p[BB], x - 1, y - 1, z))
+                    Perlin.lerp(u, Perlin.grad(p[AA], x, y, z), Perlin.grad(p[BA], x - 1, y, z)),
+                    Perlin.lerp(u, Perlin.grad(p[AB], x, y - 1, z), Perlin.grad(p[BB], x - 1, y - 1, z))
                 ),
-                lerp(
+                Perlin.lerp(
                     v,
-                    lerp(u, grad(p[AA + 1], x, y, z - 1), grad(p[BA + 1], x - 1, y, z - 1)),
-                    lerp(u, grad(p[AB + 1], x, y - 1, z - 1), grad(p[BB + 1], x - 1, y - 1, z - 1 ))
+                    Perlin.lerp(u, Perlin.grad(p[AA + 1], x, y, z - 1), Perlin.grad(p[BA + 1], x - 1, y, z - 1)),
+                    Perlin.lerp(u, Perlin.grad(p[AB + 1], x, y - 1, z - 1), Perlin.grad(p[BB + 1], x - 1, y - 1, z - 1 ))
                 )
             )
         );
