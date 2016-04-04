@@ -7,7 +7,17 @@ import * as Geometry from './geometry.js';
 
 window.world = new World(100);
 
-let geometry = Geometry.createCubeSphere(10, 5);
+let geometry = Geometry.createCubeSphere(20, 5);
+
+let h = 1;
+geometry.vertices.map(function(v){
+    h = Math.min(1.1, Math.max(0.9, h + (Math.random() - 0.5) / 15));
+
+    v.setX(v.x * h);
+    v.setY(v.y * h);
+    v.setZ(v.z * h);
+});
+
 let material = new THREE.MeshLambertMaterial({color: 0x00aaaa});
 let mesh = new THREE.Mesh(geometry, material);
 let edges = new THREE.EdgesHelper(mesh, 0x008800);

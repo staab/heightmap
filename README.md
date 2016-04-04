@@ -1,0 +1,1 @@
+http://www.gamasutra.com/view/feature/131507/a_realtime_procedural_universe_.php?print=1
