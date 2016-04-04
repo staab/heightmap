@@ -4,26 +4,43 @@ import * as THREE from 'three';
 
 import {World} from './world.js';
 import * as Geometry from './geometry.js';
+import {Perlin} from './noise.js';
 
 window.world = new World(100);
 
-let geometry = Geometry.createCubeSphere(20, 5);
+// Land
+(function(){
+    let geometry = Geometry.createCubeSphere(10, 5);
 
-let h = 1;
-geometry.vertices.map(function(v){
-    h = Math.min(1.1, Math.max(0.9, h + (Math.random() - 0.5) / 15));
+    let h = 1;
+    geometry.vertices.map(function(v){
+        h = Math.min(1.1, Math.max(0.9, h + (Math.random() - 0.5) / 15));
 
-    v.setX(v.x * h);
-    v.setY(v.y * h);
-    v.setZ(v.z * h);
-});
+        v.setX(v.x * h);
+        v.setY(v.y * h);
+        v.setZ(v.z * h);
+    });
 
-let material = new THREE.MeshLambertMaterial({color: 0x00aaaa});
-let mesh = new THREE.Mesh(geometry, material);
-let edges = new THREE.EdgesHelper(mesh, 0x008800);
+    let material = new THREE.MeshLambertMaterial({color: 0xaa5555});
+    let land = new THREE.Mesh(geometry, material);
+    let edges = new THREE.EdgesHelper(land, 0x008800);
 
-window.world.scene.add(mesh);
-window.world.scene.add(edges);
+    window.world.scene.add(land);
+    window.world.scene.add(edges);
+}());
+
+
+// Water
+(function(){
+    let geometry = Geometry.createCubeSphere(10, 5);
+    let material = new THREE.MeshLambertMaterial({
+        color: 0x00aaaa,
+        transparent: true,
+        opacity: 0.5
+    });
+    let water = new THREE.Mesh(geometry, material);
+    window.world.scene.add(water);
+}());
 
 
 
