@@ -10,20 +10,22 @@ import {Perlin, Mpd} from './noise.js';
 
 let OrbitControls = _OrbitControls.default(THREE);
 
-function Scene(exponent, spread){
+function Scene(world){
     let self = this,
         width = window.innerWidth,
         height = window.innerHeight;
 
     _.assign(self, {
         scene: new THREE.Scene(),
-        camera: new THREE.PerspectiveCamera(50, width / height, 1, 10000),
+        camera: new THREE.PerspectiveCamera(50, width / height, 1, world.mapSize**2),
         ambientLight: new THREE.AmbientLight(0x402020),
-        pointLight1: new THREE.PointLight(0xccccff, 1, 100000),
-        pointLight2: new THREE.PointLight(0xccccff, 1, 100000),
+        pointLight1: new THREE.PointLight(0xccccff, 1, world.mapSize**2),
+        pointLight2: new THREE.PointLight(0xccccff, 1, world.mapSize**2),
         renderer: new THREE.WebGLRenderer(),
-        exponent: exponent,
-        spread: spread,
+        camDist: world.maxZoom - world.minZoom,
+        lastCamPos: null,
+        world: world,
+        level: 0
     });
 
     // Set point light position
@@ -32,6 +34,11 @@ function Scene(exponent, spread){
 
     // Renderer
     self.renderer.setSize(width, height);
+
+    // Set our camera up
+    self.camera.position.set(self.camDist, self.camDist, self.camDist);
+    self.camera.lookAt(new THREE.Vector3(0, 0, 0));
+    self.lastCamPos = self.camera.position.clone();
 
     // Add stuff to the scene
     self.scene.add(self.camera);
@@ -43,11 +50,13 @@ function Scene(exponent, spread){
     document.body.appendChild(self.renderer.domElement);
 
     // Add some controls
-    new OrbitControls(self.camera),
+    new OrbitControls(self.camera);
 
-    // Animate
-    self.createTerrain();
-    self.animate();
+    // Add some terrain
+    self.createTerrain(self.level);
+
+    // Render it up
+    self.render();
 }
 
 Scene.prototype.hmToGeometry = function hmToGeometry(hm, scale) {
@@ -90,60 +99,70 @@ Scene.prototype.hmToGeometry = function hmToGeometry(hm, scale) {
     return geometry
 };
 
+
 Scene.prototype.createTerrain = function createTerrain() {
-    let self = this,
-        scale = 50,
-        hm = Mpd.displacement(Hm.create(self.exponent), self.spread),
-        radius = (hm.resolution / 2) * scale,
-        landGeometry = self.hmToGeometry(hm, scale),
-        waterGeometry = new THREE.PlaneGeometry(radius * 2, radius * 2, hm.resolution, hm.resolution),
-        landMaterial,
-        waterMaterial,
-        land,
-        water;
+    let self = this;
 
-    // Set up material
-    landMaterial = new THREE.MeshLambertMaterial({color: 0x993311});
-    waterMaterial = new THREE.MeshLambertMaterial({color: 0x2288aa, opacity: 0.8, transparent: true});
+    let landDef = {
+        geometry: new THREE.BoxGeometry(self.world.mapSize, 1, self.world.mapSize),
+        material: new THREE.MeshLambertMaterial({color: 0x993311})
+    };
 
-    land = new THREE.Mesh(landGeometry, landMaterial);
-    land.rotation.x -= Math.PI / 2;
-    land.position.x -= radius;
-    land.position.z += radius;
+    let level = self.world.levels[self.level];
+    let land = new THREE.Mesh(landDef.geometry, landDef.material);
 
-    waterGeometry.computeFaceNormals();
-    water = new THREE.Mesh(waterGeometry, waterMaterial);
-    water.rotation.x -= Math.PI / 2;
-
-    // Reposition camera
-    self.camera.position.set(radius, radius, radius);
-    self.camera.lookAt(new THREE.Vector3(0, 0, 0));
+    landDef.geometry.computeFaceNormals();
+    land = new THREE.Mesh(landDef.geometry, landDef.material);
 
     // Add it
     self.scene.add(land);
-    self.scene.add(water);
 
-    // save it for the render loop
+    // save it for later
     self.land = land;
-    self.water = water;
-}
+};
 
-Scene.prototype.animate = function animate() {
-    var self = this;
+Scene.prototype.switchLevel = function switchLevel(index) {
+    let self = this;
+    let curLevel = self.world.levels[self.level];
+    let newLevel = self.world.levels[index];
 
-    requestAnimationFrame(this.animate.bind(this));
+    self.camera.position.multiplyScalar(newLevel.scale / curLevel.scale);
+    self.land.material.color = new THREE.Color(newLevel.color);
 
-    // Jitter
-    self.water.geometry.vertices.map(function(vertex) {
-        vertex.setZ(Util.jitter(vertex.z, 1));
-    });
-    self.water.geometry.verticesNeedUpdate = true;
+    // Change curLevel now
+    self.level = index;
+};
 
-    this.render();
-}
+Scene.prototype.zoom = function zoom() {
+    let self = this;
+    let camPos = self.camera.position;
+    let camDist = Math.cbrt(camPos.x**2 + camPos.y**2 + camPos.z**2);
+
+    if (camDist < self.world.minZoom && self.level !== self.world.levels.length - 1) {
+        self.switchLevel(self.level + 1);
+    } else if (camDist > self.world.maxZoom && self.level !== 0) {
+        self.switchLevel(self.level - 1);
+    } else if (camDist < self.world.minZoom || camDist > self.world.maxZoom) {
+        // Prevent zooming in/out too far
+        camPos.copy(self.lastCamPos);
+    }
+};
 
 Scene.prototype.render = function render() {
-    this.renderer.render(this.scene, this.camera);
-}
+    var self = this;
+
+    // Throttle framerate a bit so we don't send our computer to space
+    setTimeout(function(){
+        requestAnimationFrame(self.render.bind(self));
+    }, 100);
+
+    // Handle zoom
+    self.zoom()
+
+    // Save stuff for later
+    self.lastCamPos = self.camera.position.clone();
+
+    self.renderer.render(self.scene, self.camera);
+};
 
 export {Scene};

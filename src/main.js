@@ -1,5 +1,6 @@
 "use strict";
 
 import {Scene} from './scene.js';
+import {world} from './world.js';
 
-window.s = new Scene(6, 10);
+window.s = new Scene(world);//6, 10);
