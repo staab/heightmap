@@ -10,7 +10,7 @@ window.world = new World(100);
 
 // Land
 (function(){
-    let segments = 10;
+    let segments = 20;
     let geometry = Geometry.createCubeSphere(segments, 5);
     let scaleDampening = 10 / segments;
 
@@ -19,8 +19,7 @@ window.world = new World(100);
         dampening *= scaleDampening;
 
         // Get some noise
-        let mod = ((Math.random() + 0.5) * scale) / scaleDampening,
-            noise = Perlin.noise(x * mod, y * mod, z * mod),
+        let noise = Perlin.noise(x, y, z),
             normDelta = 1 - dampening / 2;
 
         // Dampen it a bit
@@ -33,11 +32,10 @@ window.world = new World(100);
     }
 
     geometry.vertices.map(function(v){
-        let noise = (
-            getNoise(v.x, v.y, v.z, 0.1, 0.1) +
-            getNoise(v.y, v.z, v.x, 0.2, 0.5) +
-            getNoise(v.z, v.x, v.y, 0.3, 1)
-        ) / 3;
+        let noise =
+            getNoise(v.x, v.y, v.z, 10, 0.1) +
+            getNoise(v.x, v.y, v.z, 10, 0.5) -
+            getNoise(v.x, v.y, v.z, 10, 1);
 
         v.setX(v.x * noise);
         v.setY(v.y * noise);
@@ -59,7 +57,7 @@ window.world = new World(100);
     let material = new THREE.MeshLambertMaterial({
         color: 0x00aaaa,
         transparent: true,
-        opacity: 0.5
+        opacity: 0.3
     });
     let water = new THREE.Mesh(geometry, material);
     window.world.scene.add(water);
