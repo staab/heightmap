@@ -1,22 +1,27 @@
 let world = {
     minZoom: 10,
-    maxZoom: 30,
+    maxZoom: 100,
     mapSize: 500,
     levels: [
         {
             name: 'top',
             scale: 1,
-            color: 0x993311
+            terrain: [{
+                start: [10, 10],
+                stop: [300, 490],
+                jitter: 1,
+                width: 10
+            }]
         },
         {
             name: 'mid',
             scale: 10,
-            color: 0x119933
+            terrain: []
         },
         {
             name: 'bottom',
             scale: 100,
-            color: 0x331199
+            terrain: []
         },
     ]
 };

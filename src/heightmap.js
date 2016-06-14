@@ -3,17 +3,13 @@
 import {Util} from './util.js';
 
 let Hm = {
-    create(exponent) {
-        let resolution = 1 + Math.pow(2, exponent),
-            hm;
-
-        hm = _.map(new Array(Math.pow(resolution, 2)), function(){
+    create(resolution) {
+        let hm = _.map(new Array(Math.pow(resolution, 2)), function(){
             return 0.0;
         });
 
         return _.assign(hm, {
             resolution: resolution,
-            exponent: exponent,
             last: resolution - 1
         });
     },

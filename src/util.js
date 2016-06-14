@@ -12,7 +12,9 @@ let Util = {
                 fn(x, y);
             }
         }
-    }
+    },
+    degToRad: (degrees) => degrees * Math.PI / 180,
+    radToDeg: (radians) => radians * 180 / Math.PI
 };
 
 export {Util};

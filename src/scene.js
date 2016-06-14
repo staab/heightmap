@@ -10,7 +10,54 @@ import {Perlin, Mpd} from './noise.js';
 
 let OrbitControls = _OrbitControls.default(THREE);
 
-function Scene(world){
+function hmToGeometry(hm, scale) {
+    let geometry = new THREE.Geometry(),
+        vIndex = 0,
+        vertices = {};
+
+    Util.doNested(hm.resolution, function(x, z){
+        let y = Hm.get(hm, x, z);
+
+        geometry.vertices.push(new THREE.Vector3(x * scale, y * scale, z * scale));
+
+        _.set(vertices, x + "." + z, vIndex);
+
+        vIndex += 1;
+    });
+    Util.doNested(hm.resolution, function(x, z){
+        let x1 = x + 1,
+            z1 = z + 1;
+
+        if(Hm.getSafe(hm, x1, z1) === null){
+            return;
+        }
+
+        geometry.faces.push(new THREE.Face3(
+            vertices[x][z],
+            vertices[x1][z],
+            vertices[x][z1],
+        ));
+
+        geometry.faces.push(new THREE.Face3(
+            vertices[x1][z],
+            vertices[x1][z1],
+            vertices[x][z1],
+        ));
+    });
+
+    geometry.center();
+    geometry.rotateX(Util.degToRad(180));
+    geometry.computeFaceNormals();
+
+    return geometry
+}
+
+function applyTerrain(hm, terrain) {
+    return hm;
+}
+
+
+function Scene(world) {
     let self = this,
         width = window.innerWidth,
         height = window.innerHeight;
@@ -59,60 +106,22 @@ function Scene(world){
     self.render();
 }
 
-Scene.prototype.hmToGeometry = function hmToGeometry(hm, scale) {
-    let geometry = new THREE.Geometry(),
-        vIndex = 0,
-        vertices = {};
-
-    Util.doNested(hm.resolution, function(x, y){
-        let z = Hm.get(hm, x, y);
-
-        geometry.vertices.push(new THREE.Vector3(x * scale, y * scale, z * scale));
-
-        _.set(vertices, x + "." + y, vIndex);
-
-        vIndex += 1;
-    });
-    Util.doNested(hm.resolution, function(x, y){
-        let x1 = x + 1,
-            y1 = y + 1;
-
-        if(Hm.getSafe(hm, x1, y1) === null){
-            return;
-        }
-
-        geometry.faces.push(new THREE.Face3(
-            vertices[x][y],
-            vertices[x1][y],
-            vertices[x][y1],
-        ));
-
-        geometry.faces.push(new THREE.Face3(
-            vertices[x1][y],
-            vertices[x1][y1],
-            vertices[x][y1],
-        ));
-    });
-
-    geometry.computeFaceNormals();
-
-    return geometry
-};
-
 
 Scene.prototype.createTerrain = function createTerrain() {
     let self = this;
-
-    let landDef = {
-        geometry: new THREE.BoxGeometry(self.world.mapSize, 1, self.world.mapSize),
-        material: new THREE.MeshLambertMaterial({color: 0x993311})
-    };
-
     let level = self.world.levels[self.level];
-    let land = new THREE.Mesh(landDef.geometry, landDef.material);
 
-    landDef.geometry.computeFaceNormals();
-    land = new THREE.Mesh(landDef.geometry, landDef.material);
+    // Heightmap
+    let hmScale = 10;
+    let hm = applyTerrain(Hm.create(self.world.mapSize / hmScale), level.terrain);
+
+    // THREE objects
+    let geometry = hmToGeometry(hm, hmScale);
+    let material = new THREE.MeshLambertMaterial({color: 0x993311});
+    let land = new THREE.Mesh(geometry, material);
+
+    geometry.computeFaceNormals();
+    land = new THREE.Mesh(geometry, material);
 
     // Add it
     self.scene.add(land);
@@ -126,8 +135,12 @@ Scene.prototype.switchLevel = function switchLevel(index) {
     let curLevel = self.world.levels[self.level];
     let newLevel = self.world.levels[index];
 
+    // Zoom the camera
     self.camera.position.multiplyScalar(newLevel.scale / curLevel.scale);
-    self.land.material.color = new THREE.Color(newLevel.color);
+
+    // Re-create the level
+    self.scene.remove(self.land);
+    self.createTerrain();
 
     // Change curLevel now
     self.level = index;
