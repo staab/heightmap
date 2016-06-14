@@ -14,7 +14,7 @@ let Util = {
         }
     },
     degToRad: (degrees) => degrees * Math.PI / 180,
-    radToDeg: (radians) => radians * 180 / Math.PI
+    radToDeg: (radians) => radians * 180 / Math.PI,
 };
 
 export {Util};

@@ -16,7 +16,8 @@ function hmToGeometry(hm, scale) {
         vertices = {};
 
     Util.doNested(hm.resolution, function(x, z){
-        let y = Hm.get(hm, x, z);
+        // Negative because we flip it later to get faces the right way up
+        let y = -Hm.get(hm, x, z);
 
         geometry.vertices.push(new THREE.Vector3(x * scale, y * scale, z * scale));
 
@@ -53,6 +54,24 @@ function hmToGeometry(hm, scale) {
 }
 
 function applyTerrain(hm, terrain) {
+    // TODO: make ridges contiguous for slopes > 1
+    let slope = (terrain.start[0] - terrain.stop[0]) / (terrain.start[1] - terrain.stop[1]);
+    let z = terrain.start[1];
+
+    for (let x = terrain.start[0]; x < terrain.stop[0]; x += 1) {
+        // Elevate with old z value first, so we have a contiguous ridge
+        if (Hm.getSafe(hm, x, z) !== null){
+            hm = Hm.set(hm, x, z, Util.jitter(terrain.elevate, terrain.jitter));
+        }
+
+        // Now increment z based on slope and do it again
+        z = Math.ceil(x * slope);
+
+        if (Hm.getSafe(hm, x, z) !== null){
+            hm = Hm.set(hm, x, z, Util.jitter(terrain.elevate, terrain.jitter));
+        }
+    }
+
     return hm;
 }
 
@@ -112,8 +131,13 @@ Scene.prototype.createTerrain = function createTerrain() {
     let level = self.world.levels[self.level];
 
     // Heightmap
-    let hmScale = 10;
-    let hm = applyTerrain(Hm.create(self.world.mapSize / hmScale), level.terrain);
+    let hmScale = 1;
+    let hm = Hm.create(self.world.mapSize / hmScale)
+
+    // Apply terrain to heightmap
+    level.terrain.forEach(function (terrain) {
+        hm = applyTerrain(hm, terrain);
+    });
 
     // THREE objects
     let geometry = hmToGeometry(hm, hmScale);

@@ -9,6 +9,7 @@ let world = {
             terrain: [{
                 start: [10, 10],
                 stop: [300, 490],
+                elevate: 10,
                 jitter: 1,
                 width: 10
             }]
