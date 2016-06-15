@@ -54,23 +54,54 @@ function hmToGeometry(hm, scale) {
 }
 
 function applyTerrain(hm, terrain) {
-    // TODO: make ridges contiguous for slopes > 1
     let slope = (terrain.start[0] - terrain.stop[0]) / (terrain.start[1] - terrain.stop[1]);
-    let z = terrain.start[1];
 
-    for (let x = terrain.start[0]; x < terrain.stop[0]; x += 1) {
-        // Elevate with old z value first, so we have a contiguous ridge
-        if (Hm.getSafe(hm, x, z) !== null){
-            hm = Hm.set(hm, x, z, Util.jitter(terrain.elevate, terrain.jitter));
+    function getLinePoints() {
+        let z = terrain.start[1];
+
+        // Make ridges contiguous for slopes > 1
+        let incr = slope > 1 ? slope % 1 : slope;
+
+        let points = [];
+        for (let x = terrain.start[0]; x < terrain.stop[0]; x += incr) {
+            // Use rounded version for accessing hmap, but keep float version for
+            // incrementin, in case of slopes > 1
+            let roundX = Math.ceil(x);
+
+            // Elevate with old z value first, so we have a contiguous ridge
+            if (Hm.getSafe(hm, roundX, z) !== null){
+                points.push({x: roundX, z: z});
+            }
+
+            // Now increment z based on slope and do it again
+            z = Math.ceil(x * slope);
+            if (Hm.getSafe(hm, roundX, z) !== null){
+                points.push({x: roundX, z: z});
+            }
         }
 
-        // Now increment z based on slope and do it again
-        z = Math.ceil(x * slope);
-
-        if (Hm.getSafe(hm, x, z) !== null){
-            hm = Hm.set(hm, x, z, Util.jitter(terrain.elevate, terrain.jitter));
-        }
+        return _.uniq(points);
     }
+
+    function getRegionWrap(points, width) {
+        result = [];
+
+        points.forEach(function (point) {
+            result.push({x: point.x })
+        });
+    }
+
+    let regions = [getLinePoints()];
+
+    // Apply elevation to all points
+    regions.forEach(function (regionPoints, index) {
+        let jitter = terrain.jitter / (terrain.width - index);
+
+        regionPoints.forEach(function(point){
+            hm = Hm.set(hm, point.x, point.z, Util.jitter(terrain.elevate, jitter));
+        });
+    });
+
 
     return hm;
 }

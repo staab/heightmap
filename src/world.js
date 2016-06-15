@@ -1,14 +1,14 @@
 let world = {
     minZoom: 10,
     maxZoom: 100,
-    mapSize: 500,
+    mapSize: 100,
     levels: [
         {
             name: 'top',
             scale: 1,
             terrain: [{
                 start: [10, 10],
-                stop: [300, 490],
+                stop: [80, 40],
                 elevate: 10,
                 jitter: 1,
                 width: 10
