@@ -6,143 +6,8 @@ import * as _OrbitControls from 'three-orbit-controls';
 
 import {Util} from './util.js';
 import {Hm} from './heightmap.js';
-import {Perlin, Mpd} from './noise.js';
 
 let OrbitControls = _OrbitControls.default(THREE);
-
-function hmToGeometry(hm, scale) {
-    let geometry = new THREE.Geometry(),
-        vIndex = 0,
-        vertices = {};
-
-    Util.doNested(hm.resolution, function(x, z){
-        // Negative because we flip it later to get faces the right way up
-        let y = -Hm.get(hm, x, z);
-
-        geometry.vertices.push(new THREE.Vector3(x * scale, y * scale, z * scale));
-
-        _.set(vertices, x + "." + z, vIndex);
-
-        vIndex += 1;
-    });
-    Util.doNested(hm.resolution, function(x, z){
-        let x1 = x + 1,
-            z1 = z + 1;
-
-        if(Hm.getSafe(hm, x1, z1) === null){
-            return;
-        }
-
-        geometry.faces.push(new THREE.Face3(
-            vertices[x][z],
-            vertices[x1][z],
-            vertices[x][z1],
-        ));
-
-        geometry.faces.push(new THREE.Face3(
-            vertices[x1][z],
-            vertices[x1][z1],
-            vertices[x][z1],
-        ));
-    });
-
-    geometry.center();
-    geometry.rotateX(Util.degToRad(180));
-    geometry.computeFaceNormals();
-
-    return geometry
-}
-
-function applyTerrain(hm, terrain) {
-    let slope = (terrain.start[0] - terrain.stop[0]) / (terrain.start[1] - terrain.stop[1]);
-
-    // Get the line on the heightmap closest to the terrain line
-    function getLinePoints() {
-        let z = terrain.start[1];
-
-        // Make ridges contiguous for slopes > 1
-        let incr = slope > 1 ? slope % 1 : slope;
-
-        let points = [];
-        for (let x = terrain.start[0]; x < terrain.stop[0]; x += incr) {
-            // Use rounded version for accessing hmap, but keep float version for
-            // incrementin, in case of slopes > 1
-            let roundX = Math.ceil(x);
-
-            // Elevate with old z value first, so we have a contiguous ridge
-            if (Hm.getSafe(hm, roundX, z) !== null){
-                points.push({x: roundX, z: z});
-            }
-
-            // Now increment z based on slope and do it again
-            z = Math.ceil(x * slope);
-            if (Hm.getSafe(hm, roundX, z) !== null){
-                points.push({x: roundX, z: z});
-            }
-        }
-
-        return _.uniq(points);
-    }
-
-    // Get a bounding rectangle at width distance from the terrain line
-    function getRegionWrap(points, width) {
-        let result = [];
-
-        points.forEach(function (point, index) {
-            let plusX = point.x + width;
-            let minusX = point.x - width;
-            let plusZ = Math.round(point.z + width * slope);
-            let minusZ = Math.round(point.z - width * slope);
-
-            result.push({x: plusX, z: plusZ});
-            result.push({x: minusX, z: minusZ});
-
-            if (index === 0){
-                let x = plusX;
-                while(x > minusX){
-                    x -= 1;
-                    result.push({x: x, z: minusZ});
-                }
-
-                let z = plusZ;
-                while(z > minusZ){
-                    z -= 1;
-                    result.push({x: minusX, z: z});
-                }
-            } else if (index === points.length - 1){
-                let x = plusX;
-                while(x > minusX){
-                    x -= 1;
-                    result.push({x: x, z: plusZ});
-                }
-
-                let z = plusZ;
-                while(z > minusZ){
-                    z -= 1;
-                    result.push({x: plusX, z: z});
-                }
-            }
-        });
-        console.log(result);
-        return result;
-    }
-
-    let regions = [getLinePoints()];
-
-    // regions.push(getRegionWrap(regions[0], terrain.width))
-
-    // Apply elevation to all points
-    regions.forEach(function (regionPoints, index) {
-        let jitter = terrain.jitter / (terrain.width - index);
-
-        regionPoints.forEach(function(point){
-            hm = Hm.set(hm, point.x, point.z, Util.jitter(terrain.elevate, jitter));
-        });
-    });
-
-
-    return hm;
-}
 
 
 function Scene(world) {
@@ -205,11 +70,11 @@ Scene.prototype.createTerrain = function createTerrain() {
 
     // Apply terrain to heightmap
     level.terrain.forEach(function (terrain) {
-        hm = applyTerrain(hm, terrain);
+        hm = Hm.applyTerrain(hm, terrain);
     });
 
     // THREE objects
-    let geometry = hmToGeometry(hm, hmScale);
+    let geometry = Hm.toGeometry(hm, hmScale);
     let material = new THREE.MeshLambertMaterial({color: 0x993311});
     let land = new THREE.Mesh(geometry, material);
 
@@ -218,6 +83,10 @@ Scene.prototype.createTerrain = function createTerrain() {
 
     // Add it
     self.scene.add(land);
+
+    // Edges helper
+    let edges = new THREE.EdgesHelper(land, 0xaa8811);
+    self.scene.add(edges);
 
     // save it for later
     self.land = land;
