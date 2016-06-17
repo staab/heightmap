@@ -56,6 +56,7 @@ function hmToGeometry(hm, scale) {
 function applyTerrain(hm, terrain) {
     let slope = (terrain.start[0] - terrain.stop[0]) / (terrain.start[1] - terrain.stop[1]);
 
+    // Get the line on the heightmap closest to the terrain line
     function getLinePoints() {
         let z = terrain.start[1];
 
@@ -83,15 +84,52 @@ function applyTerrain(hm, terrain) {
         return _.uniq(points);
     }
 
+    // Get a bounding rectangle at width distance from the terrain line
     function getRegionWrap(points, width) {
-        result = [];
+        let result = [];
 
-        points.forEach(function (point) {
-            result.push({x: point.x })
+        points.forEach(function (point, index) {
+            let plusX = point.x + width;
+            let minusX = point.x - width;
+            let plusZ = Math.round(point.z + width * slope);
+            let minusZ = Math.round(point.z - width * slope);
+
+            result.push({x: plusX, z: plusZ});
+            result.push({x: minusX, z: minusZ});
+
+            if (index === 0){
+                let x = plusX;
+                while(x > minusX){
+                    x -= 1;
+                    result.push({x: x, z: minusZ});
+                }
+
+                let z = plusZ;
+                while(z > minusZ){
+                    z -= 1;
+                    result.push({x: minusX, z: z});
+                }
+            } else if (index === points.length - 1){
+                let x = plusX;
+                while(x > minusX){
+                    x -= 1;
+                    result.push({x: x, z: plusZ});
+                }
+
+                let z = plusZ;
+                while(z > minusZ){
+                    z -= 1;
+                    result.push({x: plusX, z: z});
+                }
+            }
         });
+        console.log(result);
+        return result;
     }
 
     let regions = [getLinePoints()];
+
+    // regions.push(getRegionWrap(regions[0], terrain.width))
 
     // Apply elevation to all points
     regions.forEach(function (regionPoints, index) {
