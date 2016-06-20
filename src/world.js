@@ -9,9 +9,10 @@ let world = {
             name: 'top',
             scale: 1,
             terrain: [{
-                line: new THREE.Line3(
-                    new THREE.Vector3(13, 3, 15),
-                    new THREE.Vector3(18, 10, 27)
+                triangle: new THREE.Triangle(
+                    new THREE.Vector3(10, 0, 0),
+                    new THREE.Vector3(30, 5, 0),
+                    new THREE.Vector3(10, 10, 20)
                 ),
                 jitter: 1,
                 width: 3
