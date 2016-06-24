@@ -14,8 +14,8 @@ let world = {
                     new THREE.Vector3(30, 5, 0),
                     new THREE.Vector3(10, 10, 20)
                 ),
-                jitter: 1,
-                width: 3
+                jitter: 3,
+                extent: 1.5
             }]
         },
         {

@@ -40,50 +40,103 @@ function lineToPoints(line) {
     }
 
     return points;
-};
+}
 
 
-// Get a bounding rectangle at width distance from the terrain line
-function getRegionWrap(points, width) {
-    let result = [];
+function getTriangleCenter(triangle) {
+    let center = new THREE.Vector3();
 
-    points.forEach(function (point, index) {
-        let plusX = point.x + width;
-        let minusX = point.x - width;
-        let plusZ = Math.round(point.z + width * slope);
-        let minusZ = Math.round(point.z - width * slope);
+    // Get the midpoint of the triangle by averaging corners
+    center.addVectors(triangle.a, triangle.b);
+    center.add(triangle.c);
+    center.divideScalar(3);
 
-        result.push({x: plusX, z: plusZ});
-        result.push({x: minusX, z: minusZ});
+    return center
+}
 
-        if (index === 0){
-            let x = plusX;
-            while(x > minusX){
-                x -= 1;
-                result.push({x: x, z: minusZ});
-            }
 
-            let z = plusZ;
-            while(z > minusZ){
-                z -= 1;
-                result.push({x: minusX, z: z});
-            }
-        } else if (index === points.length - 1){
-            let x = plusX;
-            while(x > minusX){
-                x -= 1;
-                result.push({x: x, z: plusZ});
-            }
+function scaleTriangle(triangle, scale) {
+    let center = getTriangleCenter(triangle);
+    let result = new THREE.Triangle();
 
-            let z = plusZ;
-            while(z > minusZ){
-                z -= 1;
-                result.push({x: plusX, z: z});
-            }
+    let newA = new THREE.Vector3();
+    newA.subVectors(triangle.a, center);
+    newA.multiplyScalar(scale);
+    newA.add(center);
+
+    let newB = new THREE.Vector3();
+    newB.subVectors(triangle.b, center);
+    newB.multiplyScalar(scale);
+    newB.add(center);
+
+    let newC = new THREE.Vector3();
+    newC.subVectors(triangle.c, center);
+    newC.multiplyScalar(scale);
+    newC.add(center);
+
+    return new THREE.Triangle(newA, newB, newC);
+}
+
+
+// This gets the y value at the given 2d coordinates
+function getYinTriangle(triangle, x, z) {
+    let p1 = triangle.a;
+    let p2 = triangle.b;
+    let p3 = triangle.c;
+
+    let a = -(p3.z*p2.y-p1.z*p2.y-p3.z*p1.y+p1.y*p2.z+p3.y*p1.z-p2.z*p3.y);
+    let b = (p1.z*p3.x+p2.z*p1.x+p3.z*p2.x-p2.z*p3.x-p1.z*p2.x-p3.z*p1.x);
+    let c = (p2.y*p3.x+p1.y*p2.x+p3.y*p1.x-p1.y*p3.x-p2.y*p1.x-p2.x*p3.y);
+    let d = -a*p1.x-b*p1.y-c*p1.z;
+
+    return -(a*x+c*z+d)/b;
+}
+
+
+function pointIsInTriangle(triangle, x, y, z) {
+    let barycoord = triangle.barycoordFromPoint(new THREE.Vector3(x, y, z));
+
+    return barycoord.x > 0 && barycoord.y > 0 && barycoord.z > 0;
+}
+
+
+function sortPointsClockwise(center) {
+    // http://stackoverflow.com/a/6989383/1467342
+    // this is wrong.
+    return function (a, b) {
+        if (a.x - center.x >= 0 && b.x - center.x < 0){
+            return 1;
         }
-    });
-    console.log(result);
-    return result;
+
+        if (a.x - center.x < 0 && b.x - center.x >= 0){
+            return -1;
+        }
+
+        if (a.x - center.x == 0 && b.x - center.x == 0) {
+            if (a.y - center.y >= 0 || b.y - center.y >= 0){
+                return a.y > b.y;
+            }
+
+            return b.y > a.y;
+        }
+
+        // compute the cross product of vectors (center -> a) x (center -> b)
+        let det = (a.x - center.x) * (b.y - center.y) - (b.x - center.x) * (a.y - center.y);
+        if (det < 0) {
+            return 1;
+        }
+
+        if (det > 0) {
+            return -1;
+        }
+
+        // points a and b are on the same line from the center
+        // check which point is closer to the center
+        let d1 = (a.x - center.x) * (a.x - center.x) + (a.y - center.y) * (a.y - center.y);
+        let d2 = (b.x - center.x) * (b.x - center.x) + (b.y - center.y) * (b.y - center.y);
+
+        return d1 - d2;
+    }
 }
 
 
@@ -109,27 +162,12 @@ let Hm = {
             ? Hm.get(hm, x, y) : null;
     },
     getInTriangle(hm, triangle) {
-        let a = triangle.a,
-            b = triangle.b,
-            c = triangle.c,
-            points = [];
-
-        // This gets the y value at the given 2d coordinates
-        function calcY(p1, p2, p3, x, z) {
-              let a = -(p3.z*p2.y-p1.z*p2.y-p3.z*p1.y+p1.y*p2.z+p3.y*p1.z-p2.z*p3.y);
-              let b = (p1.z*p3.x+p2.z*p1.x+p3.z*p2.x-p2.z*p3.x-p1.z*p2.x-p3.z*p1.x);
-              let c = (p2.y*p3.x+p1.y*p2.x+p3.y*p1.x-p1.y*p3.x-p2.y*p1.x-p2.x*p3.y);
-              let d = -a*p1.x-b*p1.y-c*p1.z;
-
-              return -(a*x+c*z+d)/b;
-        }
+        let points = [];
 
         Util.doNested(hm.resolution, function(x, z){
-            let y = calcY(a, b, c, x, z);
-            let barycoord = triangle.barycoordFromPoint(new THREE.Vector3(x, y, z));
+            let y = getYinTriangle(triangle, x, z);
 
-            // Is it inside the triangle?
-            if (barycoord.x > 0 && barycoord.y > 0 && barycoord.z > 0) {
+            if (pointIsInTriangle(triangle, x, y, z)) {
                 points.push(new THREE.Vector3(x, y, z));
             }
         });
@@ -195,11 +233,21 @@ let Hm = {
         return geometry
     },
     applyTerrain(hm, terrain) {
-        let ridge = Hm.getInTriangle(hm, terrain.triangle);
+        let triangle = scaleTriangle(terrain.triangle, terrain.extent);
+        let center = getTriangleCenter(triangle);
+        let points = Hm.getInTriangle(hm, triangle);
 
-        ridge.forEach(function(point){
-            hm = Hm.set(hm, point.x, point.z, Util.jitter(point.y, terrain.jitter));
+        // points.sort(sortPointsClockwise(center));
+        points.sort(function(point1, point2) {
+            return point1.distanceTo(center) - point2.distanceTo(center);
         });
+
+        points.reduce(function (prevY, current) {
+            let y = Util.average(prevY, Util.jitter(current.y, terrain.jitter));
+            hm = Hm.set(hm, current.x, current.z, y);
+
+            return y;
+        }, points[0].y);
 
         return hm;
     }
