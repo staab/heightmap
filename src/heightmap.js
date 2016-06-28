@@ -100,43 +100,45 @@ function pointIsInTriangle(triangle, x, y, z) {
 }
 
 
-function sortPointsClockwise(center) {
-    // http://stackoverflow.com/a/6989383/1467342
-    // this is wrong.
-    return function (a, b) {
-        if (a.x - center.x >= 0 && b.x - center.x < 0){
-            return 1;
-        }
+function angleBetweenPoints(a, b) {
+    return Math.atan2(b.z - a.z, b.x - a.x) * 180 / Math.PI;
+}
 
-        if (a.x - center.x < 0 && b.x - center.x >= 0){
-            return -1;
-        }
 
-        if (a.x - center.x == 0 && b.x - center.x == 0) {
-            if (a.y - center.y >= 0 || b.y - center.y >= 0){
-                return a.y > b.y;
+function sortPointsClockwise(center, points) {
+    let result = [];
+
+    // Sort by distance from center descending first
+    points.sort(function(a, b){
+        return b.distanceTo(center) - a.distanceTo(center);
+    });
+
+    let maxDist = points[0].distanceTo(center);
+    let minDist = maxDist - 1;
+
+    while(minDist > 0) {
+        let chunk = [];
+
+        // Get concentric circles around center point
+        points.forEach(function(point) {
+            if (Util.withinOpen(minDist, point.distanceTo(center), maxDist)) {
+                chunk.push(point);
             }
+        });
 
-            return b.y > a.y;
-        }
+        // Sort the circle clockwise by angle at center from first point
+        // http://math.stackexchange.com/questions/1018164/sorting-a-list-of-points-in-2-d-clockwise
+        let refPoint = chunk[0];
+        chunk.sort(function (a, b) {
+            return angleBetweenPoints(refPoint, a) - angleBetweenPoints(refPoint, b);
+        });
 
-        // compute the cross product of vectors (center -> a) x (center -> b)
-        let det = (a.x - center.x) * (b.y - center.y) - (b.x - center.x) * (a.y - center.y);
-        if (det < 0) {
-            return 1;
-        }
-
-        if (det > 0) {
-            return -1;
-        }
-
-        // points a and b are on the same line from the center
-        // check which point is closer to the center
-        let d1 = (a.x - center.x) * (a.x - center.x) + (a.y - center.y) * (a.y - center.y);
-        let d2 = (b.x - center.x) * (b.x - center.x) + (b.y - center.y) * (b.y - center.y);
-
-        return d1 - d2;
+        result = result.concat(chunk);
+        maxDist -= 1;
+        minDist -= 1;
     }
+
+    return result;
 }
 
 
@@ -237,17 +239,16 @@ let Hm = {
         let center = getTriangleCenter(triangle);
         let points = Hm.getInTriangle(hm, triangle);
 
-        // points.sort(sortPointsClockwise(center));
-        points.sort(function(point1, point2) {
-            return point1.distanceTo(center) - point2.distanceTo(center);
-        });
+        points = sortPointsClockwise(center, points);
 
-        points.reduce(function (prevY, current) {
+        (function reduce(prevY, curIndex) {
+            let current = points[curIndex];
+
             let y = Util.average(prevY, Util.jitter(current.y, terrain.jitter));
             hm = Hm.set(hm, current.x, current.z, y);
 
-            return y;
-        }, points[0].y);
+            setTimeout(reduce.bind(null, y, curIndex + 1), 30);
+        }(points[0].y, 0));
 
         return hm;
     }

@@ -73,23 +73,27 @@ Scene.prototype.createTerrain = function createTerrain() {
         hm = Hm.applyTerrain(hm, terrain);
     });
 
-    // THREE objects
-    let geometry = Hm.toGeometry(hm, hmScale);
-    let material = new THREE.MeshLambertMaterial({color: 0x993311});
-    let land = new THREE.Mesh(geometry, material);
+    (function render(){
+        // THREE objects
+        let geometry = Hm.toGeometry(hm, hmScale);
+        let material = new THREE.MeshLambertMaterial({color: 0x993311});
+        let land = new THREE.Mesh(geometry, material);
 
-    geometry.computeFaceNormals();
-    land = new THREE.Mesh(geometry, material);
+        geometry.computeFaceNormals();
+        land = new THREE.Mesh(geometry, material);
 
-    // Add it
-    self.scene.add(land);
+        // Add it
+        self.scene.add(land);
 
-    // Edges helper
-    let edges = new THREE.EdgesHelper(land, 0xaa8811);
-    self.scene.add(edges);
+        // Edges helper
+        let edges = new THREE.EdgesHelper(land, 0xaa8811);
+        self.scene.add(edges);
 
-    // save it for later
-    self.land = land;
+        // save it for later
+        self.land = land;
+
+        setTimeout(render, 300)
+    }());
 };
 
 Scene.prototype.switchLevel = function switchLevel(index) {
