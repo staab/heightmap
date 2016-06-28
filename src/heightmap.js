@@ -237,18 +237,30 @@ let Hm = {
     applyTerrain(hm, terrain) {
         let triangle = scaleTriangle(terrain.triangle, terrain.extent);
         let center = getTriangleCenter(triangle);
-        let points = Hm.getInTriangle(hm, triangle);
+        let points = sortPointsClockwise(center, Hm.getInTriangle(hm, triangle));
+        let maxDist = points[0].distanceTo(center);
 
-        points = sortPointsClockwise(center, points);
+        points.reduce(function (prevY, point) {
+            let dist = point.distanceTo(center);
 
-        (function reduce(prevY, curIndex) {
-            let current = points[curIndex];
+            // Jitter y from position in terrain triangle
+            let y = Util.jitter(point.y, terrain.jitter);
 
-            let y = Util.average(prevY, Util.jitter(current.y, terrain.jitter));
-            hm = Hm.set(hm, current.x, current.z, y);
+            // Average in the previous point
+            y = Util.average(prevY, y);
 
-            setTimeout(reduce.bind(null, y, curIndex + 1), 30);
-        }(points[0].y, 0));
+            // If it's outside the triangle, bring it closer to its original position
+            let originalY = Hm.get(point.x, point.z);
+            let distWeight = Math.floor(dist**1.5 / maxDist)
+            let yWeight = _.map(new Array(distWeight), () => originalY);
+            y = Util.average(y, ...yWeight);
+
+
+            // Set it to the heightmap
+            hm = Hm.set(hm, point.x, point.z, y);
+
+            return y;
+        }, points[0].y);
 
         return hm;
     }
