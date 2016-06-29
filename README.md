@@ -1,7 +1,7 @@
 - Layers of resoultion x10
 - Layer attributes - certain ones override, other ones merge.
     - E.g., low resolution specifies area as wasteland, higher resolution specifies subset of area as swamp; it should be tundra-y swamp.
-    - Eventually we'll want models placed on the map
+    - Eventually we'll want models placed on the map (e.g. weathertop)
 - Figure out a better camera so it's easier to move around. Add basic collision detection to keep it above ground.
 - Define biomes
     - Color related to elevation or features
@@ -14,3 +14,8 @@
 # Known issues
 
 Hm.toGeometry should build the faces pointing up, rather than building them pointing down, then flip them.
+
+With terrain generation:
+
+- Points are adjusted using the average y of the current point, the previous point, and the weighted original y value of the current point in a linear spiral. This causes circular ridges, since it doesn't take into account neighboring points in the previous circle.
+- Interpolation between ridge and surrounding terrain is done based on distance from the center of the triangle; it should rather be distance from the closest edge, and target the closest edge's y value, too.

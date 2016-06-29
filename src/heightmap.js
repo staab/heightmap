@@ -12,8 +12,7 @@ function lineToPoints(line) {
         // Make sure we're going the right direction
         zSign = rise >= 0 ? 1 : -1,
         xSign = run >= 0 ? 1 : -1,
-        slope = rise / run,
-        distance = line.distance(),
+        slope = Math.abs(rise / run),
         ySlope = (line.end.y - line.start.y) / Math.sqrt(rise**2 + run**2),
         x = line.start.x,
         z = line.start.z,
@@ -24,22 +23,32 @@ function lineToPoints(line) {
         return [];
     }
 
-    while(Math.abs(line.end.x - x) > 0 && Math.abs(line.end.z - z) > 0) {
+    while(Math.round(Math.abs(line.end.x - x)) > 0 || Math.round(Math.abs(line.end.z - z)) > 0) {
         let y = line.start.y + ySlope * Math.sqrt((line.start.x - x)**2 + (line.start.z - z)**2);
 
         points.push(new THREE.Vector3(Math.floor(x), y, Math.floor(z)));
         points.push(new THREE.Vector3(Math.ceil(x), y, Math.ceil(z)));
 
-        if (slope > 1) {
-            z += zSign * 1;
+        if (Math.abs(slope) > 1) {
+            z += zSign;
             x += xSign * (1/slope);
         } else {
-            z += zSign * (slope);
-            x += xSign * 1;
+            z += zSign * slope;
+            x += xSign;
+        }
+
+        if(Math.abs(x) > 1000){
+            break;
         }
     }
 
-    return points;
+    return _.uniq(points);
+}
+
+function linesToPoints(...lines) {
+    return _.uniq(lines.reduce(function(points, line) {
+        return points.concat(lineToPoints(line));
+    }, []));
 }
 
 
@@ -238,9 +247,16 @@ let Hm = {
         let triangle = scaleTriangle(terrain.triangle, terrain.extent);
         let center = getTriangleCenter(triangle);
         let points = sortPointsClockwise(center, Hm.getInTriangle(hm, triangle));
-        let maxDist = points[0].distanceTo(center);
+        let edge = linesToPoints(
+            new THREE.Line3(triangle.a, triangle.b),
+            new THREE.Line3(triangle.b, triangle.c),
+            new THREE.Line3(triangle.c, triangle.a),
+        ).filter(function(point){
+            // Get rid of irrelevant points
+            return Hm.getSafe(hm, point.x, point.z) !== null;
+        });
 
-        points.reduce(function (prevY, point) {
+        edge.reduce(function (prevY, point) {
             let dist = point.distanceTo(center);
 
             // Jitter y from position in terrain triangle
@@ -260,7 +276,7 @@ let Hm = {
             hm = Hm.set(hm, point.x, point.z, y);
 
             return y;
-        }, points[0].y);
+        }, edge[0].y);
 
         return hm;
     }

@@ -9,7 +9,7 @@ function randY() {
     return Math.random() * 30 - 15;
 }
 
-let terrain = _.map(new Array(10), function(){
+let terrain = _.map(new Array(1), function(){
     return {
         triangle: new THREE.Triangle(
             new THREE.Vector3(randXZ(), randY(), randXZ()),
@@ -20,6 +20,17 @@ let terrain = _.map(new Array(10), function(){
         extent: 1.5
     };
 });
+
+terrain = [{
+    triangle: new THREE.Triangle(
+        new THREE.Vector3(12, 8, 18),
+        new THREE.Vector3(28, 6, 17),
+        new THREE.Vector3(0, 8, 39)
+    ),
+    jitter: 1.7563185790613423,
+    extent: 1.5
+}];
+
 
 let world = {
     minZoom: 10,
