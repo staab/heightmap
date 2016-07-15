@@ -1,8 +1,8 @@
 "use strict";
 
-import {Util} from './util.js';
+import {always, uniq, assocPath} from 'ramda'
+import {average, degToRad, doNested, jitter, withinOpen} from './util.js';
 import * as THREE from 'three';
-import * as _ from 'lodash';
 
 // Translates a Line3 to an array of contiguous points projected onto
 // the heightmap, ignoring the y value
@@ -42,11 +42,11 @@ function lineToPoints(line) {
         }
     }
 
-    return _.uniq(points);
+    return uniq(points);
 }
 
 function linesToPoints(...lines) {
-    return _.uniq(lines.reduce(function(points, line) {
+    return uniq(lines.reduce(function(points, line) {
         return points.concat(lineToPoints(line));
     }, []));
 }
@@ -130,7 +130,7 @@ function sortPointsClockwise(center, points) {
 
         // Get concentric circles around center point
         points.forEach(function(point) {
-            if (Util.withinOpen(minDist, point.distanceTo(center), maxDist)) {
+            if (withinOpen(minDist, point.distanceTo(center), maxDist)) {
                 chunk.push(point);
             }
         });
@@ -153,14 +153,9 @@ function sortPointsClockwise(center, points) {
 
 let Hm = {
     create(resolution) {
-        let hm = _.map(new Array(Math.pow(resolution, 2)), function(){
-            return 0.0;
-        });
+        let hm = (new Array(Math.pow(resolution, 2))).map(always(0.0))
 
-        return _.assign(hm, {
-            resolution: resolution,
-            last: resolution - 1
-        });
+        return {...hm, resolution: resolution, last: resolution - 1}
     },
     getIndex(hm, x, y) {
         return x + (y * hm.resolution);
@@ -169,13 +164,13 @@ let Hm = {
         return hm[Hm.getIndex(hm, x, y)];
     },
     getSafe(hm, x, y) {
-        return Util.withinOpen(0, x, hm.last) && Util.withinOpen(0, y, hm.last)
+        return withinOpen(0, x, hm.last) && withinOpen(0, y, hm.last)
             ? Hm.get(hm, x, y) : null;
     },
     getInTriangle(hm, triangle) {
         let points = [];
 
-        Util.doNested(hm.resolution, function(x, z){
+        doNested(hm.resolution, function(x, z){
             let y = getYinTriangle(triangle, x, z);
 
             if (pointIsInTriangle(triangle, x, y, z)) {
@@ -191,8 +186,8 @@ let Hm = {
         return hm;
     },
     normalize(hm) {
-        let min = _.min(hm),
-            span = _.max(hm) - min;
+        let min = min(hm),
+            span = max(hm) - min;
 
         return hm.map(function(v){
             return (v - min) / span;
@@ -206,17 +201,17 @@ let Hm = {
             vIndex = 0,
             vertices = {};
 
-        Util.doNested(hm.resolution, function(x, z){
+        doNested(hm.resolution, function(x, z){
             // Negative because we flip it later to get faces the right way up
             let y = -Hm.get(hm, x, z);
 
             geometry.vertices.push(new THREE.Vector3(x * scale, y * scale, z * scale));
 
-            _.set(vertices, x + "." + z, vIndex);
+            vertices = assocPath([x, z], vIndex, vertices)
 
             vIndex += 1;
         });
-        Util.doNested(hm.resolution, function(x, z){
+        doNested(hm.resolution, function(x, z){
             let x1 = x + 1,
                 z1 = z + 1;
 
@@ -238,7 +233,7 @@ let Hm = {
         });
 
         geometry.center();
-        geometry.rotateX(Util.degToRad(180));
+        geometry.rotateX(degToRad(180));
         geometry.computeFaceNormals();
 
         return geometry
@@ -247,6 +242,7 @@ let Hm = {
         let triangle = scaleTriangle(terrain.triangle, terrain.extent);
         let center = getTriangleCenter(triangle);
         let points = sortPointsClockwise(center, Hm.getInTriangle(hm, triangle));
+        let maxDist = points[0].distanceTo(center)
         let edge = linesToPoints(
             new THREE.Line3(triangle.a, triangle.b),
             new THREE.Line3(triangle.b, triangle.c),
@@ -260,17 +256,16 @@ let Hm = {
             let dist = point.distanceTo(center);
 
             // Jitter y from position in terrain triangle
-            let y = Util.jitter(point.y, terrain.jitter);
+            let y = jitter(point.y, terrain.jitter);
 
             // Average in the previous point
-            y = Util.average(prevY, y);
+            y = average(prevY, y);
 
             // If it's outside the triangle, bring it closer to its original position
             let originalY = Hm.get(point.x, point.z);
             let distWeight = Math.floor(dist**1.5 / maxDist)
-            let yWeight = _.map(new Array(distWeight), () => originalY);
-            y = Util.average(y, ...yWeight);
-
+            let yWeight = (new Array(distWeight)).map(always(originalY));
+            y = average(y, ...yWeight);
 
             // Set it to the heightmap
             hm = Hm.set(hm, point.x, point.z, y);

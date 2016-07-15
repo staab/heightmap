@@ -1,10 +1,8 @@
 "use strict";
 
-import * as _ from 'lodash';
 import * as THREE from 'three';
 import * as _OrbitControls from 'three-orbit-controls';
 
-import {Util} from './util.js';
 import {Hm} from './heightmap.js';
 
 let OrbitControls = _OrbitControls.default(THREE);
@@ -15,7 +13,7 @@ function Scene(world) {
         width = window.innerWidth,
         height = window.innerHeight;
 
-    _.assign(self, {
+    Object.assign(self, {
         scene: new THREE.Scene(),
         camera: new THREE.PerspectiveCamera(50, width / height, 1, world.mapSize**2),
         ambientLight: new THREE.AmbientLight(0x402020),

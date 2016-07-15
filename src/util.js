@@ -1,20 +1,27 @@
-"use strict";
+import {sum, identity} from 'ramda'
 
-let Util = {
-    withinOpen: (low, v, high) => low <= v && v <= high,
-    withinClosed: (low, v, high) => low < v && v < high,
-    randAroundZero: (spread) => (spread * 2 * Math.random()) - spread,
-    jitter: (value, spread) => value + Util.randAroundZero(spread),
-    average: (...items) => _.sum(items) / items.length,
-    doNested(width, fn){
-        for(let x = 0; x < width; x++) {
-            for(let y = 0; y < width; y++) {
-                fn(x, y);
-            }
+export const withinOpen = (low, v, high) => low <= v && v <= high
+
+export const withinClosed = (low, v, high) => low < v && v < high
+
+export const randAroundZero = (spread) => (spread * 2 * Math.random()) - spread
+
+export const jitter = (value, spread) => value + randAroundZero(spread)
+
+export const average = (...items) => {
+    items = items.filter(identity)
+
+    return sum(items) / items.length
+}
+
+export const doNested = (width, fn) =>{
+    for(let x = 0; x < width; x++) {
+        for(let y = 0; y < width; y++) {
+            fn(x, y);
         }
-    },
-    degToRad: (degrees) => degrees * Math.PI / 180,
-    radToDeg: (radians) => radians * 180 / Math.PI,
-};
+    }
+}
 
-export {Util};
+export const degToRad = (deg) => deg * Math.PI / 180
+
+export const radToDeg = (rad) => rad * 180 / Math.PI

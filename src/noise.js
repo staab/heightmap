@@ -1,8 +1,7 @@
 "use strict";
 
-import * as _ from 'lodash';
-
-import {Util} from './util.js';
+import {range} from 'ramda'
+import {average, jitter, doNested} from './util.js';
 import {Hm} from './heightmap.js';
 
 let Perlin = {
@@ -46,7 +45,7 @@ let Perlin = {
                 61, 156, 180
            ];
 
-        _.range(0, 255).foreach(function(i){
+        range(0, 255).foreach(function(i){
             p[256+i] = p[i] = permutation[i];
 
         });
@@ -103,25 +102,25 @@ let Mpd = {
         return hm;
     },
     displace(hm, lx, rx, by, ty, spread) {
-        let cx = Util.average(lx, rx),
-            cy = Util.average(by, ty),
+        let cx = average(lx, rx),
+            cy = average(by, ty),
             // Positions
             bottomLeft = Hm.get(hm, lx, by),
             bottomRight = Hm.get(hm, rx, by),
             topLeft = Hm.get(hm, lx, ty),
             topRight = Hm.get(hm, rx, ty),
             // Midpoints of sides
-            top = Util.average(topLeft, topRight),
-            left = Util.average(bottomLeft, topLeft),
-            bottom = Util.average(bottomLeft, bottomRight),
-            right = Util.average(bottomRight, topRight),
-            center = Util.average(top, left, bottom, right);
+            top = average(topLeft, topRight),
+            left = average(bottomLeft, topLeft),
+            bottom = average(bottomLeft, bottomRight),
+            right = average(bottomRight, topRight),
+            center = average(top, left, bottom, right);
 
-        hm = Hm.set(hm, cx, by, Util.jitter(bottom, spread));
-        hm = Hm.set(hm, cx, ty, Util.jitter(top, spread));
-        hm = Hm.set(hm, lx, cy, Util.jitter(left, spread));
-        hm = Hm.set(hm, rx, cy, Util.jitter(right, spread));
-        hm = Hm.set(hm, cx, cy, Util.jitter(center, spread));
+        hm = Hm.set(hm, cx, by, jitter(bottom, spread));
+        hm = Hm.set(hm, cx, ty, jitter(top, spread));
+        hm = Hm.set(hm, lx, cy, jitter(left, spread));
+        hm = Hm.set(hm, rx, cy, jitter(right, spread));
+        hm = Hm.set(hm, cx, cy, jitter(center, spread));
 
         return hm;
     },
@@ -134,7 +133,7 @@ let Mpd = {
             let chunks = Math.pow(2, iter),
                 chunkWidth = (hm.resolution - 1) / chunks;
 
-            Util.doNested(chunks, function(xChunk, yChunk){
+            doNested(chunks, function(xChunk, yChunk){
                 let leftX = chunkWidth * xChunk,
                     rightX = leftX + chunkWidth,
                     bottomY = chunkWidth * yChunk,
