@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {map} from 'ramda'
 
 function randXZ() {
     return Math.random() * 50;
@@ -8,15 +9,25 @@ function randY() {
     return Math.random() * 30 - 15;
 }
 
-let terrain = (new Array(1)).map(() => ({
+let terrain = map(() => ({
     triangle: new THREE.Triangle(
         new THREE.Vector3(randXZ(), randY(), randXZ()),
         new THREE.Vector3(randXZ(), randY(), randXZ()),
         new THREE.Vector3(randXZ(), randY(), randXZ())
     ),
-    jitter: Math.random() * 2,
+    jitter: 1.0,//Math.random() * 1.8,
     extent: 1.5
-}))
+}), new Array(0))
+
+terrain.push({
+    triangle: new THREE.Triangle(
+        new THREE.Vector3(-10, 0, -10),
+        new THREE.Vector3(-10, 0, 60),
+        new THREE.Vector3(60, 10, 60)
+    ),
+    jitter: 1.0,
+    extent: 1.5
+})
 
 terrain = [{
     triangle: new THREE.Triangle(
@@ -24,7 +35,7 @@ terrain = [{
         new THREE.Vector3(28, 6, 17),
         new THREE.Vector3(0, 8, 39)
     ),
-    jitter: 1.7563185790613423,
+    jitter: 1.2,
     extent: 1.5
 }];
 

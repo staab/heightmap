@@ -1,4 +1,4 @@
-import {sum, identity} from 'ramda'
+import {sum, identity, equals, complement} from 'ramda'
 
 export const withinOpen = (low, v, high) => low <= v && v <= high
 
@@ -9,7 +9,7 @@ export const randAroundZero = (spread) => (spread * 2 * Math.random()) - spread
 export const jitter = (value, spread) => value + randAroundZero(spread)
 
 export const average = (...items) => {
-    items = items.filter(identity)
+    items = items.filter(complement(equals(undefined)))
 
     return sum(items) / items.length
 }

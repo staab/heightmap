@@ -84,7 +84,7 @@ Scene.prototype.createTerrain = function createTerrain() {
 
     // Edges helper
     let edges = new THREE.EdgesHelper(land, 0xaa8811);
-    self.scene.add(edges);
+    // self.scene.add(edges);
 
     // save it for later
     self.land = land;
