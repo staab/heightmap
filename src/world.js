@@ -15,9 +15,9 @@ let terrain = map(() => ({
         new THREE.Vector3(randXZ(), randY(), randXZ()),
         new THREE.Vector3(randXZ(), randY(), randXZ())
     ),
-    jitter: 1.0,//Math.random() * 1.8,
+    jitter: 0.8,//Math.random() * 1.8,
     extent: 1.5
-}), new Array(0))
+}), new Array(10))
 
 terrain.push({
     triangle: new THREE.Triangle(
@@ -31,11 +31,11 @@ terrain.push({
 
 terrain = [{
     triangle: new THREE.Triangle(
-        new THREE.Vector3(12, 8, 18),
+        new THREE.Vector3(12, 8, 0),
         new THREE.Vector3(28, 6, 17),
         new THREE.Vector3(0, 8, 39)
     ),
-    jitter: 1.2,
+    jitter: 0.8,
     extent: 1.5
 }];
 

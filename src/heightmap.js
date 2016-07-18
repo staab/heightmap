@@ -246,11 +246,12 @@ let Hm = {
 
         chunks.reduce((tier, points) => {
             points.forEach((point) => {
-                let yWeight = map(always(Hm.get(hm, point.x, point.z)), new Array(Math.floor(tier)))
-                yWeight.push(jitter(point.y, terrain.jitter))
-                // yWeight = yWeight.concat(map(always(jitter(point.y, terrain.jitter)), new Array(Math.floor(tiers - tier))))
+                const a = (n) => new Array(Math.max(0, Math.floor(n / 3 - 1)))
 
-                hm = Hm.set(hm, point.x, point.z, average(...yWeight))
+                let oldYWeight = map(always(Hm.get(hm, point.x, point.z)), a(tier))
+                let newYWeight = map(always(jitter(point.y, terrain.jitter)), a(tiers - tier))
+
+                hm = Hm.set(hm, point.x, point.z, average(...oldYWeight.concat(newYWeight)))
             })
 
             return tier - 1
