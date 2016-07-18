@@ -114,7 +114,7 @@ function angleBetweenPoints(a, b) {
 }
 
 
-function sortPointsClockwise(center, points) {
+function sortPointsClockwise(center, points, fromCenter=false) {
     let result = []
 
     // Sort by distance from center descending first
@@ -145,6 +145,10 @@ function sortPointsClockwise(center, points) {
         result.push(chunk)
         maxDist -= 1
         minDist -= 1
+    }
+
+    if (fromCenter) {
+        result.reverse()
     }
 
     return result
@@ -239,44 +243,34 @@ let Hm = {
         return geometry
     },
     applyTerrain(hm, terrain) {
-        let triangle = scaleTriangle(terrain.triangle, terrain.extent)
-        let center = getTriangleCenter(triangle)
-        let chunks = sortPointsClockwise(center, Hm.getInTriangle(hm, triangle))
-        let tiers = chunks.length
+        let scaledTriangle = scaleTriangle(terrain.triangle, terrain.extent)
+        let chunks = sortPointsClockwise(getTriangleCenter(scaledTriangle), Hm.getInTriangle(hm, scaledTriangle))
+        let edgeLines = [
+            new THREE.Line3(scaledTriangle.a, scaledTriangle.b),
+            new THREE.Line3(scaledTriangle.b, scaledTriangle.c),
+            new THREE.Line3(scaledTriangle.c, scaledTriangle.a)
+        ]
 
         chunks.reduce((tier, points) => {
-            points.forEach((point) => {
-                const a = (n) => new Array(Math.max(0, Math.floor(n / 3 - 1)))
+            points.reduce((lastY, point) => {
+                let y = average(lastY, jitter(point.y, terrain.jitter))
 
-                let oldYWeight = map(always(Hm.get(hm, point.x, point.z)), a(tier))
-                let newYWeight = map(always(jitter(point.y, terrain.jitter)), a(tiers - tier))
+                if (pointIsInTriangle(terrain.triangle, point.x, point.y, point.z)) {
+                    hm = Hm.set(hm, point.x, point.z, y)
+                } else {
+                    let distFromEdge = Math.min(...edgeLines.map(line => point.distanceTo(line.closestPointToPoint(point))))
+                    let distFromTriangle = point.distanceTo(terrain.triangle.closestPointToPoint(point))
 
-                hm = Hm.set(hm, point.x, point.z, average(...oldYWeight.concat(newYWeight)))
-            })
+                    let newY = (Hm.get(hm, point.x, point.z) * distFromTriangle + y * distFromEdge) / (distFromTriangle + distFromEdge)
+
+                    hm = Hm.set(hm, point.x, point.z, newY)
+                }
+
+                return point.y
+            }, points[0] ? points[0].y : 0)
 
             return tier - 1
-        }, tiers)
-
-        // points.reduce(function (prevY, point) {
-        //     let dist = point.distanceTo(center)
-
-        //     // Jitter y from position in terrain triangle
-        //     let y = point.y//jitter(point.y, terrain.jitter)
-
-        //     // Average in the previous point
-        //     y = average(prevY, y)
-
-        //     // If it's outside the triangle, bring it closer to its original position
-        //     let originalY = Hm.get(hm, point.x, point.z)
-        //     let distWeight = Math.floor(dist**1.5 / maxDist)
-        //     let yWeight = (new Array(distWeight)).map(always(originalY))
-        //     y = average(y, ...yWeight)
-
-        //     // Set it to the heightmap
-        //     hm = Hm.set(hm, point.x, point.z, y)
-
-        //     return y
-        // }, points[0].y)
+        }, chunks.length)
 
         return hm
     }

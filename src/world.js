@@ -6,7 +6,7 @@ function randXZ() {
 }
 
 function randY() {
-    return Math.random() * 30 - 15;
+    return Math.random() * 20 - 10;
 }
 
 let terrain = map(() => ({
@@ -15,19 +15,9 @@ let terrain = map(() => ({
         new THREE.Vector3(randXZ(), randY(), randXZ()),
         new THREE.Vector3(randXZ(), randY(), randXZ())
     ),
-    jitter: 0.8,//Math.random() * 1.8,
-    extent: 1.5
+    jitter: 0,//Math.random() * 1.8,
+    extent: 5
 }), new Array(10))
-
-terrain.push({
-    triangle: new THREE.Triangle(
-        new THREE.Vector3(-10, 0, -10),
-        new THREE.Vector3(-10, 0, 60),
-        new THREE.Vector3(60, 10, 60)
-    ),
-    jitter: 1.0,
-    extent: 1.5
-})
 
 terrain = [{
     triangle: new THREE.Triangle(
@@ -35,8 +25,8 @@ terrain = [{
         new THREE.Vector3(28, 6, 17),
         new THREE.Vector3(0, 8, 39)
     ),
-    jitter: 0.8,
-    extent: 1.5
+    jitter: 1,
+    extent: 2.5
 }];
 
 
