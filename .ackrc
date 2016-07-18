@@ -1,1 +1,3 @@
 --ignore-dir=jspm_packages
+--ignore-dir=resources
+--ignore-file=match:figwheel_server.log

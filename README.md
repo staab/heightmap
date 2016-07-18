@@ -19,3 +19,11 @@ With terrain generation:
 
 - Points are adjusted using the average y of the current point, the previous point, and the weighted original y value of the current point in a linear spiral. This causes circular ridges, since it doesn't take into account neighboring points in the previous circle.
 - Interpolation between ridge and surrounding terrain is done based on distance from the center of the triangle; it should rather be distance from the closest edge, and target the closest edge's y value, too.
+
+# Clojurescript
+
+cd to 'cljs'. It should be self-contained.
+
+## Installing
+
+`lein deps` will install clojurescript and js deps
