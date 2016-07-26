@@ -1,5 +1,6 @@
 (ns tgen.scene
-    (:require [three]))
+    (:require [three]
+              [tgen.state :refer [STATE]]))
 
 (defn create-scene
   [world-size init render]
@@ -29,15 +30,15 @@
    (.add scene point1)
    (.add scene point2)
 
-   (init scene)
-
-   (letfn [(animate
-             []
-             ; Throttle framerate a bit so we don't send our computer to space
-             (when @RUNNING (js/setTimeout #(js/requestAnimationFrame animate) 100))
-             (render)
-             (.render renderer scene camera))]
-     (animate))
+   (let [render-data (init scene)]
+     (letfn [(animate
+               []
+               ; Throttle framerate a bit so we don't send our computer to space
+               (when @RUNNING (js/setTimeout #(js/requestAnimationFrame animate) 100))
+               (render render-data)
+               (.render renderer scene camera)
+               (.update (:stats @STATE)))]
+       (animate)))
 
    {:stopper #(reset! RUNNING false)
     :renderer renderer}))
