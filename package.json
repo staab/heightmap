@@ -1,8 +1,8 @@
 {
   "jspm": {
     "dependencies": {
-      "lodash": "npm:lodash@^4.6.1",
-      "three": "npm:three@^0.74.0",
+      "ramda": "npm:ramda@^0.21.0",
+      "three": "npm:three@^0.79.0",
       "three-orbit-controls": "npm:three-orbit-controls@^72.0.0"
     },
     "devDependencies": {

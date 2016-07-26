@@ -1,59 +1,65 @@
-"use strict";
-
-import * as _ from 'lodash';
 import * as THREE from 'three';
-import * as _OrbitControls from 'three-orbit-controls';
+import {map} from 'ramda'
 
-import {Util} from './util.js';
-import {Hm} from './heightmap.js';
-import {Perlin, Mpd} from './noise.js';
+const SIZE = 100
 
-let OrbitControls = _OrbitControls.default(THREE);
-
-// map size
-// factor out algorithm and objects
-// add hierarchy for objects
-
-function World(size){
-    let self = this,
-        radius = size/2,
-        width = window.innerWidth,
-        height = window.innerHeight;
-
-    _.assign(self, {
-        scene: new THREE.Scene(),
-        // Give us a little extra breathing room
-        camera: new THREE.PerspectiveCamera(45, width / height, 1, radius + radius/5),
-        ambientLight: new THREE.AmbientLight(0xeeeeee),
-        renderer: new THREE.WebGLRenderer()
-    });
-
-    // Camera
-    self.camera.position.set(radius/2, radius/2, radius/2);
-    self.camera.lookAt(new THREE.Vector3(0, 0, 0));
-
-    // Renderer
-    self.renderer.setSize(width, height);
-
-    // Add stuff to the scene
-    self.scene.add(self.camera);
-    self.scene.add(self.ambientLight);
-
-    // Add it to the body
-    document.body.appendChild(self.renderer.domElement);
-
-    // Add some controls
-    new OrbitControls(self.camera);
-
-    self.animate();
+function randXZ() {
+    return Math.random() * SIZE;
 }
 
-World.prototype.animate = function animate() {
-    var self = this;
-
-    requestAnimationFrame(self.animate.bind(self));
-
-    self.renderer.render(self.scene, self.camera);
+function randY() {
+    return Math.random() * 20 - 10;
 }
 
-export {World};
+function randTriangle() {
+    let center = randXZ()
+    let randXZDelta = () => center + (Math.random() * 30 - 15)
+
+    return new THREE.Triangle(
+        new THREE.Vector3(randXZDelta(), randY(), randXZDelta()),
+        new THREE.Vector3(randXZDelta(), randY(), randXZDelta()),
+        new THREE.Vector3(randXZDelta(), randY(), randXZDelta())
+    )
+}
+
+let terrain = map(() => ({
+    triangle: randTriangle(),
+    jitter: 0.2,//Math.random() * 1.8,
+    extent: 5
+}), new Array(20))
+
+// terrain = [{
+//     triangle: new THREE.Triangle(
+//         new THREE.Vector3(12, 8, 0),
+//         new THREE.Vector3(28, 6, 17),
+//         new THREE.Vector3(0, 8, 39)
+//     ),
+//     jitter: 1,
+//     extent: 2.5
+// }];
+
+
+let world = {
+    minZoom: 10,
+    maxZoom: 100,
+    mapSize: SIZE,
+    levels: [
+        {
+            name: 'top',
+            scale: 1,
+            terrain: terrain
+        },
+        {
+            name: 'mid',
+            scale: 10,
+            terrain: []
+        },
+        {
+            name: 'bottom',
+            scale: 100,
+            terrain: []
+        },
+    ]
+};
+
+export {world};

@@ -5,8 +5,6 @@
 # .editorconfig file)
 root = true
 
-# Tab indentation. No size is specified, meaning you can set your IDE to your
-# preferred spacing style (1-space tabs, 8-space tabs, we don't care).
 indent_style = space
 indent_size = 2
 
